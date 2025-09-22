@@ -1,1 +1,0 @@
-Start of development of todo-list
