@@ -1,8 +1,6 @@
 <template>
     <main class="app-container">
-        <header class="header">
-            <h1 class="header__title title">Tassker</h1>
-        </header>
+        <Header />
 
         <section class="calendar">
             <ul class="calendar__list list">
@@ -59,7 +57,10 @@
         </section>
     </main>
 </template>
-<script setup> 
+<script setup>
+import Header from './components/Header.vue';
+
+ 
 
 </script>
 <style scoped lang="scss">
@@ -81,18 +82,6 @@
     background-color: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-
-    .header{
-        padding: 20px;
-        border-bottom: 1px solid #e0e0e0;
-
-        &__title{
-            font-size: 24px;
-            font-weight: 700;
-            color: #333;
-            text-align: left;
-        }
-    }
 
     .calendar{
         background-color: #fafafa;
