@@ -43,6 +43,8 @@ export function useTasks() {
 
   const addTask = (taskData) => {
     const date = new Date(taskData.date);
+    date.setHours(12, 0, 0, 0);
+
     const dateString = date.toDateString();
 
     if (!tasksByDate.value[dateString]) {

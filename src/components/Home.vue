@@ -1,8 +1,8 @@
 <template>
-    <div class="home">
-        <Calendar @date-selected="handleDateSelected"/>
-        <Tasks :selected-date="selectedDate"/>
-    </div>
+  <div class="home">
+    <Calendar @date-selected="handleDateSelected" />
+    <Tasks :selected-date="selectedDate" />
+  </div>
 </template>
 
 <script setup>
@@ -13,14 +13,14 @@ import Tasks from './Tasks.vue';
 const selectedDate = ref(null);
 
 const handleDateSelected = (date) => {
-    selectedDate.value = date;
+  selectedDate.value = date;
 };
 </script>
 
 <style scoped>
 .home {
-    display: flex;
-    flex-direction: column;
-    min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 80px);
 }
 </style>
