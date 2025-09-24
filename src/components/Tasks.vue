@@ -10,19 +10,22 @@
                     <span v-if="task.completed" style="color: #fff">✓</span>
                 </button>
                 <span class="tasks__text" :class="{'completed': task.completed}">{{ task.text }}</span>
+                <button class="tasks__edit" @click="editTask(task)">✎</button>
             </li>
         </ul>
         
         <div class="tasks__button-container">
-            <button class="tasks__add-button">+ Add a New Task</button>
+            <button class="tasks__add-button" @click="createTask">+ Add a New Task</button>
         </div>
     </section>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useTasks } from '../composables/useTasks';
 
+const router = useRouter();
 const props = defineProps({
     selectedDate: {
         type: String,
@@ -68,11 +71,21 @@ const handleToggleTask = (taskId) => {
     toggleTaskInStore(date, taskId);
     currentTasks.value = getTasksForDate(date);
 };
+
+const createTask = () => {
+    const dateParam = props.selectedDate ? `?date=${props.selectedDate}` : '';
+    router.push(`/task/new${dateParam}`);
+};
+
+const editTask = (task) => {
+    router.push(`/task/edit/${task.id}`);
+};
 </script>
 
 <style scoped lang="scss">
 .tasks{
     padding: 20px;
+    flex: 1;
 
     &__header{
         display: flex;
@@ -96,6 +109,7 @@ const handleToggleTask = (taskId) => {
         align-items: center;
         padding: 12px 0;
         border-bottom: 1px solid #f0f0f0;
+        position: relative;
 
         &:last-child {
             border-bottom: none;
@@ -129,10 +143,32 @@ const handleToggleTask = (taskId) => {
         font-size: 16px;
         color: #333;
         transition: all 0.2s ease;
+        flex: 1;
 
         &.completed{
             color: #999;
             text-decoration: line-through;
+        }
+    }
+
+    &__edit {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #666;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        opacity: 0;
+        font-size: 14px;
+        
+        .tasks__item:hover & {
+            opacity: 1;
+        }
+        
+        &:hover {
+            background-color: #f5f5f5;
+            color: #333;
         }
     }
 

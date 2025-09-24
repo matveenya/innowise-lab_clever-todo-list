@@ -1,22 +1,13 @@
 <template>
     <main class="app-container">
         <Header />
-        <Calendar @date-selected="handleDateSelected"/>
-        <Tasks :selected-date="selectedDate"/>
+        <RouterView />
     </main>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import Calendar from './components/Calendar.vue';
+import { RouterView } from 'vue-router';
 import Header from './components/Header.vue';
-import Tasks from './components/Tasks.vue';
-
-const selectedDate = ref(null);
-
-const handleDateSelected = (date) => {
-    selectedDate.value = date;
-};
 </script>
 
 <style scoped lang="scss">
@@ -31,5 +22,6 @@ const handleDateSelected = (date) => {
     background-color: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-height: 100vh;
 }
 </style>
