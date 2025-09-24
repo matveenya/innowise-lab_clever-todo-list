@@ -20,26 +20,53 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useTasks } from '../composables/useTasks';
 
-const { getTasksForDate, toggleTask: toggleTaskInStore, addTask } = useTasks();
+const props = defineProps({
+    selectedDate: {
+        type: String,
+        default: null
+    }
+});
 
-const currentDate = ref(new Date());
+const { getTasksForDate, toggleTask: toggleTaskInStore } = useTasks();
+
 const currentTasks = ref([]);
 
-onMounted(() => {
-    currentTasks.value = getTasksForDate(currentDate.value);
-});
+watch(() => props.selectedDate, (newDate) => {
+    if (newDate) {
+        currentTasks.value = getTasksForDate(new Date(newDate));
+    } else {
+        currentTasks.value = getTasksForDate(new Date());
+    }
+}, { immediate: true });
 
 const taskTitle = computed(() => {
     const activeTasks = currentTasks.value.filter(task => !task.completed).length;
-    return `${activeTasks} Task${activeTasks !== 1 ? 's' : ''} Today`;
+    const selectedDate = props.selectedDate ? new Date(props.selectedDate) : new Date();
+    const today = new Date();
+    
+    let title = `${activeTasks} Task${activeTasks !== 1 ? 's' : ''}`;
+    
+    if (selectedDate.toDateString() === today.toDateString()) {
+        title += ' Today';
+    } else {
+        title += ` on ${selectedDate.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        })}`;
+    }
+    
+    return title;
 });
 
 const handleToggleTask = (taskId) => {
-    toggleTaskInStore(currentDate.value, taskId);
-    currentTasks.value = getTasksForDate(currentDate.value);
+    const date = props.selectedDate ? new Date(props.selectedDate) : new Date();
+    toggleTaskInStore(date, taskId);
+    currentTasks.value = getTasksForDate(date);
 };
 </script>
 
@@ -87,6 +114,11 @@ const handleToggleTask = (taskId) => {
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+            transform: scale(1.1);
+        }
 
         &.checked{
             background-color: #ff6b35;
@@ -96,6 +128,7 @@ const handleToggleTask = (taskId) => {
     &__text{
         font-size: 16px;
         color: #333;
+        transition: all 0.2s ease;
 
         &.completed{
             color: #999;
@@ -113,9 +146,11 @@ const handleToggleTask = (taskId) => {
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
+        transition: all 0.2s ease;
 
         &:hover{
             background-color: #e55a2b;
+            transform: translateY(-1px);
         }
     }
 }
