@@ -1,0 +1,46 @@
+{
+  "hash": "ec01e37f",
+  "configHash": "214e5108",
+  "lockfileHash": "40e72bc0",
+  "browserHash": "681a931a",
+  "optimized": {
+    "vue": {
+      "src": "../../node_modules/vue/dist/vue.runtime.esm-bundler.js",
+      "file": "vue.js",
+      "fileHash": "95491166",
+      "needsInterop": false
+    },
+    "vue-router": {
+      "src": "../../node_modules/vue-router/dist/vue-router.mjs",
+      "file": "vue-router.js",
+      "fileHash": "4eb44049",
+      "needsInterop": false
+    },
+    "firebase/app": {
+      "src": "../../node_modules/firebase/app/dist/esm/index.esm.js",
+      "file": "firebase_app.js",
+      "fileHash": "2fe34aab",
+      "needsInterop": false
+    },
+    "firebase/auth": {
+      "src": "../../node_modules/firebase/auth/dist/esm/index.esm.js",
+      "file": "firebase_auth.js",
+      "fileHash": "ae5f3da4",
+      "needsInterop": false
+    },
+    "firebase/firestore": {
+      "src": "../../node_modules/firebase/firestore/dist/esm/index.esm.js",
+      "file": "firebase_firestore.js",
+      "fileHash": "e2de780f",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-Y7TKRIWE": {
+      "file": "chunk-Y7TKRIWE.js"
+    },
+    "chunk-KI7ILGMJ": {
+      "file": "chunk-KI7ILGMJ.js"
+    }
+  }
+}
