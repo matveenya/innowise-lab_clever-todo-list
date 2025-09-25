@@ -13,7 +13,7 @@
     "prepare": "husky install",
     "deploy": "npm run build && gh-pages -d dist"
   },
-  "homepage": "https://github.com/matveenya/innowise-lab_simple-calculator",
+  "homepage": "https://github.com/matveenya/innowise-lab_clever-todo-list",
   "dependencies": {
     "firebase": "^12.3.0",
     "vue": "^3.5.21",
