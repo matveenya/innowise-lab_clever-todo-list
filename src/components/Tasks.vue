@@ -4,17 +4,28 @@
       <h2 class="tasks__title title">{{ taskTitle }}</h2>
     </header>
 
-    <ul class="tasks__list list">
+    <div v-if="loading" class="tasks-loading">Loading tasks...</div>
+    <div v-else-if="error" class="tasks-error">{{ error }}</div>
+
+    <ul v-else class="tasks__list list">
       <li v-for="task in currentTasks" :key="task.id" class="tasks__item item">
         <button
           class="tasks__checkbox checkbox"
           :class="{ checked: task.completed }"
-          @click="handleToggleTask(task.id)"
+          @click="handleToggleTask(task)"
+          :disabled="toggleLoading[task.id]"
         >
           <span v-if="task.completed" style="color: #fff">✓</span>
         </button>
         <span class="tasks__text" :class="{ completed: task.completed }">{{ task.text }}</span>
         <button class="tasks__edit" @click="editTask(task)">✎</button>
+        <button class="tasks__delete" @click="deleteTask(task)" :disabled="deleteLoading[task.id]">
+          🗑️
+        </button>
+      </li>
+
+      <li v-if="currentTasks.length === 0" class="tasks__empty">
+        No tasks for this date. Click "Add a New Task" to create one!
       </li>
     </ul>
 
@@ -25,9 +36,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTasks } from '../composables/useTasks';
+import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
 const props = defineProps({
@@ -37,18 +49,58 @@ const props = defineProps({
   },
 });
 
-const { getTasksForDate, toggleTask: toggleTaskInStore } = useTasks();
+const {
+  getTasksForDate,
+  toggleTask,
+  deleteTask: deleteTaskInStore,
+  subscribeToTaskStats,
+} = useTasks();
+const { isAuthenticated } = useAuth();
 
 const currentTasks = ref([]);
+const loading = ref(false);
+const error = ref('');
+const toggleLoading = ref({});
+const deleteLoading = ref({});
+
+let unsubscribeTasks = null;
+
+const loadTasks = async () => {
+  if (!isAuthenticated.value) {
+    currentTasks.value = [];
+    return;
+  }
+
+  loading.value = true;
+  error.value = '';
+
+  try {
+    const date = props.selectedDate ? new Date(props.selectedDate) : new Date();
+    currentTasks.value = await getTasksForDate(date);
+  } catch (err) {
+    error.value = 'Failed to load tasks';
+    console.error('Error loading tasks:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  unsubscribeTasks = subscribeToTaskStats(() => {
+    loadTasks();
+  });
+});
+
+onUnmounted(() => {
+  if (unsubscribeTasks) {
+    unsubscribeTasks();
+  }
+});
 
 watch(
-  () => props.selectedDate,
-  (newDate) => {
-    if (newDate) {
-      currentTasks.value = getTasksForDate(new Date(newDate));
-    } else {
-      currentTasks.value = getTasksForDate(new Date());
-    }
+  [() => props.selectedDate, isAuthenticated],
+  () => {
+    loadTasks();
   },
   { immediate: true }
 );
@@ -74,19 +126,54 @@ const taskTitle = computed(() => {
   return title;
 });
 
-const handleToggleTask = (taskId) => {
-  const date = props.selectedDate ? new Date(props.selectedDate) : new Date();
-  toggleTaskInStore(date, taskId);
-  currentTasks.value = getTasksForDate(date);
+const handleToggleTask = async (task) => {
+  if (!isAuthenticated.value) return;
+
+  toggleLoading.value[task.id] = true;
+  try {
+    const result = await toggleTask(task.id, !task.completed);
+    if (!result.success) {
+      error.value = result.error || 'Failed to update task';
+    }
+  } catch (err) {
+    error.value = 'Error updating task';
+    console.error('Toggle task error:', err);
+  } finally {
+    toggleLoading.value[task.id] = false;
+  }
 };
 
 const createTask = () => {
+  if (!isAuthenticated.value) {
+    router.push('/signin');
+    return;
+  }
+
   const dateParam = props.selectedDate ? `?date=${props.selectedDate}` : '';
   router.push(`/task/new${dateParam}`);
 };
 
 const editTask = (task) => {
   router.push(`/task/edit/${task.id}`);
+};
+
+const deleteTask = async (task) => {
+  if (!isAuthenticated.value) return;
+
+  if (!confirm('Are you sure you want to delete this task?')) return;
+
+  deleteLoading.value[task.id] = true;
+  try {
+    const result = await deleteTaskInStore(task.id);
+    if (!result.success) {
+      error.value = result.error || 'Failed to delete task';
+    }
+  } catch (err) {
+    error.value = 'Error deleting task';
+    console.error('Delete task error:', err);
+  } finally {
+    deleteLoading.value[task.id] = false;
+  }
 };
 </script>
 
@@ -124,6 +211,13 @@ const editTask = (task) => {
     }
   }
 
+  &__empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    font-style: italic;
+  }
+
   &__checkbox {
     width: 20px;
     height: 20px;
@@ -138,8 +232,13 @@ const editTask = (task) => {
     justify-content: center;
     transition: all 0.2s ease;
 
-    &:hover {
+    &:hover:not(:disabled) {
       transform: scale(1.1);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     &.checked {
@@ -159,7 +258,8 @@ const editTask = (task) => {
     }
   }
 
-  &__edit {
+  &__edit,
+  &__delete {
     background: none;
     border: none;
     cursor: pointer;
@@ -167,16 +267,19 @@ const editTask = (task) => {
     padding: 4px 8px;
     border-radius: 4px;
     transition: all 0.2s ease;
-    opacity: 0;
+    opacity: 0.7;
     font-size: 14px;
+    margin-left: 4px;
 
-    .tasks__item:hover & {
+    &:hover:not(:disabled) {
+      background-color: #f5f5f5;
+      color: #333;
       opacity: 1;
     }
 
-    &:hover {
-      background-color: #f5f5f5;
-      color: #333;
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
     }
   }
 
@@ -197,5 +300,19 @@ const editTask = (task) => {
       transform: translateY(-1px);
     }
   }
+}
+
+.tasks-loading,
+.tasks-error {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.tasks-error {
+  color: #c33;
+  background: #fee;
+  border-radius: 8px;
+  margin: 10px 0;
 }
 </style>

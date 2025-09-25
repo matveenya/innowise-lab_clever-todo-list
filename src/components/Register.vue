@@ -51,13 +51,18 @@
           />
         </div>
 
+        <div v-if="error" class="auth-error">
+          {{ error }}
+        </div>
+
         <button type="submit" class="auth-button" :disabled="loading || !passwordsMatch">
           {{ loading ? 'Creating Account...' : 'Create Account' }}
         </button>
       </form>
 
       <footer class="auth-footer">
-        <p>Already have an account? 
+        <p>
+          Already have an account?
           <router-link to="/signin" class="auth-link">Sign in</router-link>
         </p>
       </footer>
@@ -68,37 +73,48 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
-const loading = ref(false);
+const { register, loading } = useAuth();
 
 const form = ref({
   fullName: '',
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
 });
 
+const error = ref('');
+
 const passwordsMatch = computed(() => {
-  return form.value.password === form.value.confirmPassword && form.value.password.length > 0;
+  return form.value.password === form.value.confirmPassword && form.value.password.length >= 6;
 });
 
 const handleRegister = async () => {
-  loading.value = true;
-  
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (form.value.email && form.value.password && passwordsMatch.value) {
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', form.value.email);
-      localStorage.setItem('userName', form.value.fullName);
-      router.push('/');
-    }
-  } catch (error) {
-    console.error('Registration error:', error);
-  } finally {
-    loading.value = false;
+  error.value = '';
+
+  if (!form.value.fullName || !form.value.email || !form.value.password) {
+    error.value = 'Please fill in all fields';
+    return;
+  }
+
+  if (form.value.password.length < 6) {
+    error.value = 'Password must be at least 6 characters long';
+    return;
+  }
+
+  if (!passwordsMatch.value) {
+    error.value = 'Passwords do not match';
+    return;
+  }
+
+  const result = await register(form.value.email, form.value.password, form.value.fullName);
+
+  if (result.success) {
+    router.push('/');
+  } else {
+    error.value = result.error || 'Failed to create account';
   }
 };
 </script>
@@ -168,6 +184,15 @@ const handleRegister = async () => {
     outline: none;
     border-color: #ff6b35;
   }
+}
+
+.auth-error {
+  background: #fee;
+  color: #c33;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
 }
 
 .auth-button {

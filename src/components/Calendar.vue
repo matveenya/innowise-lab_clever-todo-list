@@ -18,12 +18,12 @@
           <div class="calendar__dots" v-if="day.taskStats.total > 0">
             <span
               v-for="n in day.taskStats.pending"
-              :key="'pending-' + n"
+              :key="'pending-' + day.date.toString() + '-' + n"
               class="calendar__dot calendar__dot--pending"
             ></span>
             <span
               v-for="n in day.taskStats.completed"
-              :key="'completed-' + n"
+              :key="'completed-' + day.date.toString() + '-' + n"
               class="calendar__dot calendar__dot--completed"
             ></span>
           </div>
@@ -34,36 +34,62 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, defineEmits } from 'vue';
+import { computed, ref, onMounted, onUnmounted, defineEmits, watch } from 'vue';
 import { useTasks } from '../composables/useTasks';
+import { useAuth } from '../composables/useAuth';
 
 const emit = defineEmits(['date-selected']);
+
+const { subscribeToTaskStats } = useTasks();
+const { isAuthenticated } = useAuth();
+
+const selectedDate = ref(null);
+const scrollContainer = ref(null);
+const currentRange = ref(1);
+const taskStats = ref({});
 
 const selectDate = (day) => {
   selectedDate.value = day.date.toDateString();
   emit('date-selected', day.date.toDateString());
 };
 
-const { getTaskStats } = useTasks();
-const selectedDate = ref(null);
-const scrollContainer = ref(null);
-const currentRange = ref(1);
+onMounted(() => {
+  selectedDate.value = new Date().toDateString();
+  emit('date-selected', selectedDate.value);
+
+  const unsubscribe = subscribeToTaskStats((stats) => {
+    taskStats.value = stats;
+  });
+
+  if (scrollContainer.value) {
+    scrollContainer.value.addEventListener('scroll', checkScroll);
+  }
+
+  onUnmounted(() => {
+    unsubscribe();
+    if (scrollContainer.value) {
+      scrollContainer.value.removeEventListener('scroll', checkScroll);
+    }
+  });
+});
 
 const visibleDays = computed(() => {
   const days = [];
   const today = new Date();
 
   const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 7);
 
   const endDate = new Date(today);
-  endDate.setMonth(today.getMonth() + currentRange.value);
+  endDate.setDate(today.getDate() + 30 + (currentRange.value - 1) * 30);
 
   let currentDay = new Date(startDate);
 
   while (currentDay <= endDate) {
     const isToday = currentDay.toDateString() === today.toDateString();
     const dateString = currentDay.toDateString();
-    const taskStats = getTaskStats(currentDay);
+
+    const stats = taskStats.value[dateString] || { completed: 0, pending: 0, total: 0 };
 
     days.push({
       date: new Date(currentDay),
@@ -71,7 +97,7 @@ const visibleDays = computed(() => {
       dayNumber: currentDay.getDate(),
       isToday,
       isSelected: selectedDate.value === dateString,
-      taskStats,
+      taskStats: stats,
     });
 
     currentDay.setDate(currentDay.getDate() + 1);
@@ -96,18 +122,6 @@ const checkScroll = () => {
 const loadMoreDays = () => {
   currentRange.value += 1;
 };
-
-onMounted(() => {
-  if (scrollContainer.value) {
-    scrollContainer.value.addEventListener('scroll', checkScroll);
-  }
-});
-
-onUnmounted(() => {
-  if (scrollContainer.value) {
-    scrollContainer.value.removeEventListener('scroll', checkScroll);
-  }
-});
 </script>
 
 <style scoped lang="scss">

@@ -29,13 +29,18 @@
           />
         </div>
 
+        <div v-if="error" class="auth-error">
+          {{ error }}
+        </div>
+
         <button type="submit" class="auth-button" :disabled="loading">
           {{ loading ? 'Signing In...' : 'Sign In' }}
         </button>
       </form>
 
       <footer class="auth-footer">
-        <p>Don't have an account? 
+        <p>
+          Don't have an account?
           <router-link to="/register" class="auth-link">Sign up</router-link>
         </p>
       </footer>
@@ -46,30 +51,32 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuth } from '../composables/useAuth';
 
 const router = useRouter();
-const loading = ref(false);
+const { login, loading } = useAuth();
 
 const form = ref({
   email: '',
-  password: ''
+  password: '',
 });
 
+const error = ref('');
+
 const handleSignIn = async () => {
-  loading.value = true;
-  
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (form.value.email && form.value.password) {
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', form.value.email);
-      router.push('/');
-    }
-  } catch (error) {
-    console.error('Sign in error:', error);
-  } finally {
-    loading.value = false;
+  error.value = '';
+
+  if (!form.value.email || !form.value.password) {
+    error.value = 'Please fill in all fields';
+    return;
+  }
+
+  const result = await login(form.value.email, form.value.password);
+
+  if (result.success) {
+    router.push('/');
+  } else {
+    error.value = result.error || 'Failed to sign in';
   }
 };
 </script>
@@ -139,6 +146,15 @@ const handleSignIn = async () => {
     outline: none;
     border-color: #ff6b35;
   }
+}
+
+.auth-error {
+  background: #fee;
+  color: #c33;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
 }
 
 .auth-button {

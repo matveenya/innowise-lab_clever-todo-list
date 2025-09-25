@@ -3,6 +3,7 @@ import Home from '../components/Home.vue';
 import TaskEditor from '../components/TaskEditor.vue';
 import SignIn from '../components/SignIn.vue';
 import Register from '../components/Register.vue';
+import { auth } from '../firebase/config';
 
 const routes = [
   {
@@ -49,15 +50,19 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const unsubscribe = auth.onAuthStateChanged((user) => {
+    const isAuthenticated = !!user;
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/signin');
-  } else if (to.meta.requiresGuest && isAuthenticated) {
-    next('/');
-  } else {
-    next();
-  }
+    if (to.meta.requiresAuth && !isAuthenticated) {
+      next('/signin');
+    } else if (to.meta.requiresGuest && isAuthenticated) {
+      next('/');
+    } else {
+      next();
+    }
+
+    unsubscribe();
+  });
 });
 
 export default router;

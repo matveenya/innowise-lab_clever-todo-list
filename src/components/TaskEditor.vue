@@ -34,10 +34,14 @@
           <input v-model="form.date" type="date" class="task-editor__input" required />
         </div>
 
+        <div v-if="error" class="task-editor__error">
+          {{ error }}
+        </div>
+
         <div class="task-editor__actions">
           <button type="button" class="task-editor__cancel" @click="goBack">Cancel</button>
-          <button type="submit" class="task-editor__save" :disabled="!form.title.trim()">
-            {{ isEditing ? 'Update' : 'Save' }}
+          <button type="submit" class="task-editor__save" :disabled="!form.title.trim() || loading">
+            {{ loading ? 'Saving...' : isEditing ? 'Update' : 'Save' }}
           </button>
         </div>
       </form>
@@ -61,12 +65,15 @@ const form = ref({
   date: '',
 });
 
+const loading = ref(false);
+const error = ref('');
+
 const isEditing = computed(() => route.name === 'task-edit');
 
-onMounted(() => {
+onMounted(async () => {
   if (isEditing.value) {
-    const taskId = parseInt(route.params.id);
-    const task = getTaskById(taskId);
+    const taskId = route.params.id;
+    const task = await getTaskById(taskId);
 
     if (task) {
       form.value = {
@@ -74,6 +81,8 @@ onMounted(() => {
         description: task.description || '',
         date: formatDateForInput(task.date),
       };
+    } else {
+      error.value = 'Task not found';
     }
   } else {
     const defaultDate = route.query.date ? new Date(route.query.date) : new Date();
@@ -91,8 +100,11 @@ const goBack = () => {
   router.back();
 };
 
-const saveTask = () => {
+const saveTask = async () => {
   if (!form.value.title.trim()) return;
+
+  loading.value = true;
+  error.value = '';
 
   const taskData = {
     text: form.value.title.trim(),
@@ -100,14 +112,27 @@ const saveTask = () => {
     date: new Date(form.value.date),
   };
 
-  if (isEditing.value) {
-    const taskId = parseInt(route.params.id);
-    updateTask(taskId, taskData);
-  } else {
-    addTask(taskData);
-  }
+  try {
+    let result;
 
-  router.push('/');
+    if (isEditing.value) {
+      const taskId = route.params.id;
+      result = await updateTask(taskId, taskData);
+    } else {
+      result = await addTask(taskData);
+    }
+
+    if (result.success) {
+      router.push('/');
+    } else {
+      error.value = result.error || 'Failed to save task';
+    }
+  } catch (err) {
+    error.value = 'An unexpected error occurred';
+    console.error('Save task error:', err);
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 
@@ -196,6 +221,16 @@ const saveTask = () => {
   resize: vertical;
   min-height: 100px;
   font-family: inherit;
+}
+
+.task-editor__error {
+  background: #fee;
+  color: #c33;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .task-editor__actions {
