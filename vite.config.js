@@ -7,4 +7,5 @@ export default defineConfig({
     open: true,
     hot: true,
   },
+  base: process.env.NODE_ENV === 'production' ? 'innowise-lab_clever-todo-list' : '/',
 })
